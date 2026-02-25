@@ -1,6 +1,7 @@
 const { REST, Routes } = require('discord.js');
 const { data: blacklistData } = require('./commands/blacklist');
 const { data: strikeData }    = require('./commands/strikes');
+const { data: statusData }    = require('./commands/status');
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
@@ -9,7 +10,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     console.log('⏳ Registering slash commands...');
     await rest.put(
       Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-      { body: [blacklistData.toJSON(), strikeData.toJSON()] },
+      { body: [blacklistData.toJSON(), strikeData.toJSON(), statusData.toJSON()] },
     );
     console.log('✅ Slash commands registered successfully!');
   } catch (err) {
