@@ -98,11 +98,7 @@ if (existing.c === 0) {
     db.prepare("UPDATE categories SET color = ? WHERE name = ? AND isDefault = 1").run(color, name);
   }
   // Remove duplicates keeping lowest id
-  db.prepare(\`
-    DELETE FROM categories WHERE id NOT IN (
-      SELECT MIN(id) FROM categories GROUP BY name, COALESCE(guildId, 'null')
-    )
-  \`).run();
+  db.prepare("DELETE FROM categories WHERE id NOT IN (SELECT MIN(id) FROM categories GROUP BY name, COALESCE(guildId, 'null'))").run();
 }
 
 function generateCaseId() {
