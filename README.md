@@ -1,4 +1,4 @@
-# blbot
+# Stellron's Blacklist Bot
 A Discord blacklist bot built with discord.js v14 and SQLite.
 
 ---
