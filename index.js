@@ -1,8 +1,8 @@
-const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActivityType } = require('discord.js');
-const { blacklistCmd } = require('./commands/blacklist');
-const { strikeCmd }    = require('./commands/strikes');
-const { statusCmd }    = require('./commands/status');
-const db               = require('./database');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActivityType, REST, Routes } = require('discord.js');
+const { blacklistCmd, data: blacklistData } = require('./commands/blacklist');
+const { strikeCmd,    data: strikeData }    = require('./commands/strikes');
+const { statusCmd,    data: statusData }    = require('./commands/status');
+const db = require('./database');
 
 const client = new Client({
   intents: [
@@ -16,10 +16,25 @@ client.commands.set('blacklist', blacklistCmd);
 client.commands.set('strike',    strikeCmd);
 client.commands.set('botstatus', statusCmd);
 
+// Auto-register slash commands on startup
+async function registerCommands() {
+  try {
+    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+    await rest.put(
+      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+      { body: [blacklistData.toJSON(), strikeData.toJSON(), statusData.toJSON()] },
+    );
+    console.log('✅ Slash commands registered.');
+  } catch (err) {
+    console.error('❌ Failed to register commands:', err);
+  }
+}
+
 client.once('clientReady', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
-  // Set default status to online
+  await registerCommands();
+
   await client.user.setPresence({
     activities: [{ name: '🟢 Online', type: ActivityType.Custom }],
     status: 'online',
