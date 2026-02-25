@@ -1,19 +1,29 @@
-process.env.TOKEN = 'MTQ3NTY1MzI2OTg2MTk1Nzc1Mg.GUSLIw.MaVqaPt_qLgkP5RnthRS8-puJH7xbZ_8S_x2Bs';
-process.env.CLIENT_ID = '1475653269861957752';
-process.env.GUILD_ID  = '1459348497445687433';
-
 const { REST, Routes } = require('discord.js');
 const { data: blacklistData } = require('./commands/blacklist');
-const { data: strikeData }    = require('./commands/strikes');
+const { data: strikeData } = require('./commands/strikes');
 
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID;
+
+if (!TOKEN || !CLIENT_ID || !GUILD_ID) {
+  console.error('❌ Missing environment variables (TOKEN, CLIENT_ID, GUILD_ID)');
+  process.exit(1);
+}
+
+const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
   try {
     console.log('⏳ Registering slash commands...');
     await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-      { body: [blacklistData.toJSON(), strikeData.toJSON()] },
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+      {
+        body: [
+          blacklistData.toJSON(),
+          strikeData.toJSON()
+        ],
+      }
     );
     console.log('✅ Slash commands registered successfully!');
   } catch (err) {
