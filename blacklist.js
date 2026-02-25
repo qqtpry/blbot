@@ -15,9 +15,20 @@ const PAGE_SIZE = 10;
 
 // ── Permission check ────────────────────────────────
 async function hasPermission(interaction) {
+  // Always allow Manage Guild (admins/owner)
   if (interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) return true;
+
+  // Allow custom staff role if set
   const staffRoleId = db.settings.getStaffRole(interaction.guild.id);
   if (staffRoleId && interaction.member.roles.cache.has(staffRoleId)) return true;
+
+  // Allow if member has any role higher than the bot's highest role
+  const botMember   = await interaction.guild.members.fetchMe().catch(() => null);
+  if (!botMember) return false;
+  const botTopRole  = botMember.roles.highest;
+  const memberTop   = interaction.member.roles.highest;
+  if (memberTop.comparePositionTo(botTopRole) > 0) return true;
+
   return false;
 }
 
@@ -27,11 +38,12 @@ async function getOrCreateBlacklistRole(guild) {
   if (!role) {
     role = await guild.roles.create({
       name: '[BLACKLISTED]',
-      color: 0x2b2d31,
+      colors: [0x2b2d31],
       permissions: [],
       reason: 'Auto-created by BLBot',
     });
     for (const [, channel] of guild.channels.cache) {
+      if (!channel.permissionOverwrites) continue;
       await channel.permissionOverwrites.create(role, {
         SendMessages: false, AddReactions: false,
         Speak: false, SendMessagesInThreads: false,
@@ -80,6 +92,7 @@ function buildListEmbed(entries, page, totalPages, guild) {
 }
 
 // ── Command definition ───────────────────────────────
+// ── Command definition ───────────────────────────────
 const data = new SlashCommandBuilder()
   .setName('blacklist')
   .setDescription('Blacklist management')
@@ -96,7 +109,7 @@ const data = new SlashCommandBuilder()
         { name: '⏳  Temporary',      value: 'temporary' },
       ))
     .addUserOption(o => o.setName('requested_by').setDescription('Who requested this?'))
-    .addStringOption(o => o.setName('duration').setDescription('Duration for temporary BL e.g. 1d, 12h, 30m')))
+    .addStringOption(o => o.setName('duration').setDescription('Duration e.g. 1d, 12h, 30m')))
 
   .addSubcommand(sub => sub
     .setName('remove')
@@ -139,19 +152,17 @@ const data = new SlashCommandBuilder()
     .setDescription('Submit an appeal for your blacklist')
     .addStringOption(o => o.setName('reason').setDescription('Why should you be unblacklisted?').setRequired(true)))
 
-  .addSubcommandGroup(group => group
-    .setName('appeal')
-    .setDescription('Manage appeals')
-    .addSubcommand(sub => sub
-      .setName('accept')
-      .setDescription('Accept an appeal')
-      .addIntegerOption(o => o.setName('id').setDescription('Appeal ID').setRequired(true))
-      .addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)))
-    .addSubcommand(sub => sub
-      .setName('deny')
-      .setDescription('Deny an appeal')
-      .addIntegerOption(o => o.setName('id').setDescription('Appeal ID').setRequired(true))
-      .addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true))))
+  .addSubcommand(sub => sub
+    .setName('appeal-accept')
+    .setDescription('Accept a blacklist appeal')
+    .addIntegerOption(o => o.setName('id').setDescription('Appeal ID').setRequired(true))
+    .addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)))
+
+  .addSubcommand(sub => sub
+    .setName('appeal-deny')
+    .setDescription('Deny a blacklist appeal')
+    .addIntegerOption(o => o.setName('id').setDescription('Appeal ID').setRequired(true))
+    .addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(true)))
 
   .addSubcommand(sub => sub
     .setName('setlogchannel')
@@ -212,9 +223,9 @@ async function handleAdd(interaction) {
     new ButtonBuilder().setCustomId('bl_cancel').setLabel('Cancel').setStyle(ButtonStyle.Secondary),
   );
 
-  await interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+  const confirmMsg = await interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true, fetchReply: true });
 
-  const collector = interaction.channel.createMessageComponentCollector({
+  const collector = confirmMsg.createMessageComponentCollector({
     componentType: ComponentType.Button,
     filter: i => i.user.id === interaction.user.id && ['bl_confirm', 'bl_cancel'].includes(i.customId),
     time: 30_000, max: 1,
@@ -269,7 +280,8 @@ async function handleAdd(interaction) {
       .setFooter({ text: `${interaction.guild.name} • Total BLs: ${blCount}`, iconURL: interaction.guild.iconURL() })
       .setTimestamp();
 
-    await i.editReply({ content: '', embeds: [embed], components: [] });
+    await i.editReply({ content: '✅ Blacklist applied.', embeds: [], components: [] });
+    await interaction.channel.send({ embeds: [embed] });
     await sendLog(interaction.guild, embed);
   });
 
@@ -628,13 +640,7 @@ async function handleSetStaffRole(interaction) {
 const blacklistCmd = {
   data,
   async execute(interaction) {
-    const group = interaction.options.getSubcommandGroup(false);
-    const sub   = interaction.options.getSubcommand();
-
-    if (group === 'appeal') {
-      if (sub === 'accept') return handleAppealAccept(interaction);
-      if (sub === 'deny')   return handleAppealDeny(interaction);
-    }
+    const sub = interaction.options.getSubcommand();
 
     switch (sub) {
       case 'add':            return handleAdd(interaction);
@@ -645,6 +651,8 @@ const blacklistCmd = {
       case 'edit':           return handleEdit(interaction);
       case 'export':         return handleExport(interaction);
       case 'appeal':         return handleAppealSubmit(interaction);
+      case 'appeal-accept':  return handleAppealAccept(interaction);
+      case 'appeal-deny':    return handleAppealDeny(interaction);
       case 'setlogchannel':  return handleSetLogChannel(interaction);
       case 'setstaffrole':   return handleSetStaffRole(interaction);
     }
