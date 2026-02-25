@@ -4,7 +4,7 @@
   "description": "Discord Blacklist Bot",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node deploy-commands.js ; node index.js"
   },
   "dependencies": {
     "better-sqlite3": "^9.4.3",
