@@ -1,4 +1,4 @@
-# Stellron BL Bot V2
+# Stelltron BL Bot V2
 A Discord blacklist and moderation bot built with discord.js v14 and SQLite.
 
 ---
