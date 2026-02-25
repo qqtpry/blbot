@@ -1,21 +1,15 @@
 {
   "name": "blacklist-bot",
-  "version": "1.0.0",
-  "description": "",
+  "version": "2.0.0",
+  "description": "Discord Blacklist Bot",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/qqtpry/blbot.git"
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/qqtpry/blbot/issues"
-  },
-  "homepage": "https://github.com/qqtpry/blbot#readme"
+  "license": "ISC"
 }
