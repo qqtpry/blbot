@@ -230,10 +230,10 @@ async function handleAdd(interaction) {
     .setTitle('⚠️ Confirm Blacklist')
     .setDescription(`Blacklist <@${target.id}>?`)
     .addFields(
-      { name: 'Reason',    value: reason,    inline: true },
-      { name: 'Category',  value: category,  inline: true },
-      { name: 'Duration',  value: expiresAt ? formatExpiry(expiresAt) : 'Permanent', inline: true },
-      { name: 'Evidence',  value: evidence ?? 'None', inline: false },
+      { name: 'Reason',   value: reason,   inline: true },
+      { name: 'Category', value: category, inline: true },
+      { name: 'Type',     value: expiresAt ? `⏳ Temporary (${formatExpiry(expiresAt)})` : '🔒 Permanent', inline: true },
+      { name: 'Evidence', value: evidence ?? 'None', inline: false },
     )
     .setThumbnail(target.displayAvatarURL({ dynamic: true }));
 
