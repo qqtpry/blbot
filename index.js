@@ -1,6 +1,7 @@
-const { Client, GatewayIntentBits, Collection, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActivityType } = require('discord.js');
 const { blacklistCmd } = require('./commands/blacklist');
 const { strikeCmd }    = require('./commands/strikes');
+const { statusCmd }    = require('./commands/status');
 const db               = require('./database');
 
 const client = new Client({
@@ -13,9 +14,16 @@ const client = new Client({
 client.commands = new Collection();
 client.commands.set('blacklist', blacklistCmd);
 client.commands.set('strike',    strikeCmd);
+client.commands.set('botstatus', statusCmd);
 
 client.once('clientReady', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+
+  // Set default status to online
+  await client.user.setPresence({
+    activities: [{ name: '🟢 Online', type: ActivityType.Custom }],
+    status: 'online',
+  });
 
   console.log('🔍 Running startup BL role check...');
   for (const [, guild] of client.guilds.cache) {
@@ -52,19 +60,17 @@ client.once('clientReady', async () => {
         await member.roles.set(validRoles).catch(() => null);
         await member.setNickname(entry.nickname ?? null).catch(() => null);
       }
-      db.blacklist.delete({ userId: entry.userId, guildId: entry.guildId });
-      if (target) {
-        await target.send(`✅ Your temporary blacklist in **${guild.name}** has expired and been automatically lifted.`).catch(() => null);
-      }
+      db.blacklist.delete({ userId: entry.userId, guildId: entry.guildId, moderatorId: client.user.id, reason: 'Temporary blacklist expired' });
+      if (target) await target.send(`✅ Your temporary blacklist has expired and been automatically lifted.`).catch(() => null);
       const channelId = db.settings.getLogChannel(entry.guildId);
       if (channelId) {
         const logChannel = guild.channels.cache.get(channelId);
         if (logChannel) {
           const embed = new EmbedBuilder()
             .setColor(0x3ba55c)
-            .setTitle('⏰  Temporary BL Expired')
-            .setDescription(`<@${entry.userId}>'s temporary blacklist has expired and been automatically lifted.`)
-            .addFields({ name: 'Original Reason', value: entry.reason, inline: false })
+            .setTitle('⏰ Temporary BL Expired')
+            .setDescription(`<@${entry.userId}>'s temporary blacklist has expired.`)
+            .addFields({ name: 'Original Reason', value: entry.reason })
             .setTimestamp();
           await logChannel.send({ embeds: [embed] }).catch(() => null);
         }
@@ -88,7 +94,7 @@ client.on('guildMemberAdd', async member => {
     if (logChannel) {
       const embed = new EmbedBuilder()
         .setColor(0xe84142)
-        .setTitle('🔄  Blacklisted Member Rejoined')
+        .setTitle('🔄 Blacklisted Member Rejoined')
         .setDescription(`<@${member.id}> tried to rejoin but is still blacklisted.`)
         .addFields({ name: 'Original Reason', value: entry.reason })
         .setTimestamp();
@@ -106,11 +112,8 @@ client.on('interactionCreate', async interaction => {
   } catch (err) {
     console.error('Command error:', err);
     const msg = { content: '❌ An error occurred. Please try again.', ephemeral: true };
-    if (interaction.deferred || interaction.replied) {
-      await interaction.editReply(msg).catch(() => null);
-    } else {
-      await interaction.reply(msg).catch(() => null);
-    }
+    if (interaction.deferred || interaction.replied) await interaction.editReply(msg).catch(() => null);
+    else await interaction.reply(msg).catch(() => null);
   }
 });
 
