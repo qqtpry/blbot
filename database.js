@@ -76,13 +76,33 @@ const existing = db.prepare("SELECT COUNT(*) as c FROM categories WHERE isDefaul
 if (existing.c === 0) {
   const insert = db.prepare("INSERT INTO categories (guildId, name, color, isDefault, createdAt) VALUES (?, ?, ?, 1, ?)");
   const now = new Date().toISOString();
-  insert.run(null, 'Appealable', '#faa61a', now);
+  insert.run(null, 'Appealable',     '#faa61a', now);
   insert.run(null, 'Non-Appealable', '#e84142', now);
-  insert.run(null, 'Temporary', '#5e80eb', now);
-  insert.run(null, 'Scam', '#e84142', now);
-  insert.run(null, 'Harassment', '#e84142', now);
-  insert.run(null, 'Raid', '#e84142', now);
-  insert.run(null, 'NSFW', '#e84142', now);
+  insert.run(null, 'Temporary',      '#5e80eb', now);
+  insert.run(null, 'Scam',           '#e74c3c', now);
+  insert.run(null, 'Harassment',     '#e67e22', now);
+  insert.run(null, 'Raid',           '#9b59b6', now);
+  insert.run(null, 'NSFW',           '#e91e63', now);
+} else {
+  // Fix colors for existing default categories
+  const updates = [
+    ['Appealable',     '#faa61a'],
+    ['Non-Appealable', '#e84142'],
+    ['Temporary',      '#5e80eb'],
+    ['Scam',           '#e74c3c'],
+    ['Harassment',     '#e67e22'],
+    ['Raid',           '#9b59b6'],
+    ['NSFW',           '#e91e63'],
+  ];
+  for (const [name, color] of updates) {
+    db.prepare("UPDATE categories SET color = ? WHERE name = ? AND isDefault = 1").run(color, name);
+  }
+  // Remove duplicates keeping lowest id
+  db.prepare(\`
+    DELETE FROM categories WHERE id NOT IN (
+      SELECT MIN(id) FROM categories GROUP BY name, COALESCE(guildId, 'null')
+    )
+  \`).run();
 }
 
 function generateCaseId() {
