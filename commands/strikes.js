@@ -48,6 +48,9 @@ const strikeCmd = {
       const target = interaction.options.getUser('user');
       const reason = interaction.options.getString('reason');
 
+      if (target.id === interaction.user.id) return interaction.editReply({ content: '❌ You cannot strike yourself.' });
+      if (target.bot) return interaction.editReply({ content: '❌ You cannot strike a bot.' });
+
       db.strikes.add({ userId: target.id, guildId: interaction.guild.id, reason, moderatorId: interaction.user.id });
       const count     = db.strikes.count({ userId: target.id, guildId: interaction.guild.id });
       const threshold = db.settings.getStrikeThreshold(interaction.guild.id);
@@ -119,6 +122,9 @@ const strikeCmd = {
     if (sub === 'remove') {
       await interaction.deferReply({ ephemeral: true });
       const id = interaction.options.getInteger('id');
+      const strike = db.strikes.findById(id);
+      if (!strike) return interaction.editReply({ content: `❌ Strike \`#${id}\` not found.` });
+      if (strike.guildId !== interaction.guild.id) return interaction.editReply({ content: `❌ Strike \`#${id}\` does not belong to this server.` });
       db.strikes.remove(id);
       await interaction.editReply({ content: `✅ Strike \`#${id}\` removed.` });
     }
@@ -154,6 +160,7 @@ const strikeCmd = {
 
     if (sub === 'threshold') {
       const count = interaction.options.getInteger('count');
+      if (count < 0) return interaction.reply({ content: '❌ Threshold must be 0 or higher.', ephemeral: true });
       db.settings.setStrikeThreshold(interaction.guild.id, count);
       await interaction.reply({
         content: count === 0 ? '✅ Auto-blacklist disabled.' : `✅ Members will be auto-blacklisted after **${count}** strikes.`,

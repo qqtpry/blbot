@@ -27,11 +27,17 @@ const statusCmd = {
 
     const choice = interaction.options.getString('status');
     const s      = STATUSES[choice];
+    if (!s) return interaction.reply({ content: '❌ Invalid status choice.', ephemeral: true });
 
-    await interaction.client.user.setPresence({
-      activities: [{ name: s.activity, type: ActivityType.Custom }],
-      status: s.status,
-    });
+    try {
+      await interaction.client.user.setPresence({
+        activities: [{ name: s.activity, type: ActivityType.Custom }],
+        status: s.status,
+      });
+    } catch (err) {
+      console.error('Failed to set presence:', err);
+      return interaction.reply({ content: '❌ Failed to update bot presence.', ephemeral: true });
+    }
 
     const embed = new EmbedBuilder()
       .setColor(choice === 'up' ? 0x3ba55c : choice === 'maintenance' ? 0xfaa61a : 0xe84142)
