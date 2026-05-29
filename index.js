@@ -4,6 +4,14 @@ const { strikeCmd,    data: strikeData }    = require('./commands/strikes');
 const { statusCmd,    data: statusData }    = require('./commands/status');
 const db = require('./database');
 
+const REQUIRED_ENV = ['TOKEN', 'CLIENT_ID', 'GUILD_ID'];
+for (const key of REQUIRED_ENV) {
+  if (!process.env[key]) {
+    console.error(`❌ Missing required environment variable: ${key}`);
+    process.exit(1);
+  }
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,

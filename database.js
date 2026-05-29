@@ -196,6 +196,9 @@ module.exports = {
       return db.prepare('SELECT * FROM strikes WHERE userId = ? AND guildId = ? ORDER BY createdAt DESC').all(userId, guildId)
         .map(r => ({ ...r, createdAt: new Date(r.createdAt) }));
     },
+    findById(id) {
+      return db.prepare('SELECT * FROM strikes WHERE id = ?').get(id) ?? null;
+    },
     remove(id) {
       db.prepare('DELETE FROM strikes WHERE id = ?').run(id);
     },
@@ -239,6 +242,9 @@ module.exports = {
     },
     exists({ guildId, name }) {
       return !!db.prepare('SELECT 1 FROM categories WHERE (isDefault = 1 OR guildId = ?) AND name = ?').get(guildId, name);
+    },
+    isDefault(name) {
+      return !!db.prepare('SELECT 1 FROM categories WHERE name = ? AND isDefault = 1').get(name);
     },
   },
 

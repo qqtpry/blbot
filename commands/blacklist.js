@@ -217,6 +217,8 @@ async function handleAdd(interaction) {
   const evidence = interaction.options.getString('evidence');
   const expiresAt = parseDuration(duration);
 
+  if (target.id === interaction.user.id) return interaction.reply({ content: '❌ You cannot blacklist yourself.', ephemeral: true });
+  if (target.bot) return interaction.reply({ content: '❌ You cannot blacklist a bot.', ephemeral: true });
   if (duration && !expiresAt) return interaction.reply({ content: '❌ Invalid duration. Use `1d`, `12h`, or `30m`.', ephemeral: true });
   if (!db.categories.exists({ guildId: interaction.guild.id, name: category })) {
     return interaction.reply({ content: `❌ Category \`${category}\` doesn't exist. Use \`/blacklist category-list\` to see available categories.`, ephemeral: true });
@@ -549,6 +551,7 @@ async function handleEdit(interaction) {
   const reason   = interaction.options.getString('reason');
   const category = interaction.options.getString('category');
 
+  if (!reason && !category) return interaction.editReply({ content: '❌ You must provide at least a new reason or category.' });
   if (category && !db.categories.exists({ guildId: interaction.guild.id, name: category })) {
     return interaction.editReply({ content: `❌ Category \`${category}\` doesn't exist.` });
   }
@@ -717,9 +720,12 @@ async function handleAppealDeny(interaction) {
 // ── /blacklist category-add ───────────────────────────
 async function handleCategoryAdd(interaction) {
   if (!await hasPermission(interaction)) return interaction.reply({ content: '❌ No permission.', ephemeral: true });
-  const name  = interaction.options.getString('name');
+  const name  = interaction.options.getString('name').trim();
   const color = interaction.options.getString('color') ?? '#e84142';
 
+  if (!name) return interaction.reply({ content: '❌ Category name cannot be empty.', ephemeral: true });
+  if (name.length > 32) return interaction.reply({ content: '❌ Category name must be 32 characters or fewer.', ephemeral: true });
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return interaction.reply({ content: '❌ Invalid hex color. Use format `#ff0000`.', ephemeral: true });
   if (db.categories.exists({ guildId: interaction.guild.id, name })) {
     return interaction.reply({ content: `❌ Category \`${name}\` already exists.`, ephemeral: true });
   }
@@ -732,8 +738,14 @@ async function handleCategoryAdd(interaction) {
 async function handleCategoryRemove(interaction) {
   if (!await hasPermission(interaction)) return interaction.reply({ content: '❌ No permission.', ephemeral: true });
   const name = interaction.options.getString('name');
+  if (!db.categories.exists({ guildId: interaction.guild.id, name })) {
+    return interaction.reply({ content: `❌ Category \`${name}\` not found.`, ephemeral: true });
+  }
+  if (db.categories.isDefault(name)) {
+    return interaction.reply({ content: `❌ Cannot remove default category \`${name}\`.`, ephemeral: true });
+  }
   db.categories.remove({ guildId: interaction.guild.id, name });
-  await interaction.reply({ content: `✅ Category \`${name}\` removed (if it existed and wasn't a default).`, ephemeral: true });
+  await interaction.reply({ content: `✅ Category \`${name}\` removed.`, ephemeral: true });
 }
 
 // ── /blacklist category-list ──────────────────────────
@@ -757,6 +769,7 @@ async function handleCategoryList(interaction) {
 async function handleSetLogChannel(interaction) {
   if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) return interaction.reply({ content: '❌ No permission.', ephemeral: true });
   const channel = interaction.options.getChannel('channel');
+  if (!channel.isTextBased()) return interaction.reply({ content: '❌ Please select a text channel.', ephemeral: true });
   db.settings.setLogChannel(interaction.guild.id, channel.id);
   await interaction.reply({ content: `✅ Log channel set to <#${channel.id}>`, ephemeral: true });
 }
